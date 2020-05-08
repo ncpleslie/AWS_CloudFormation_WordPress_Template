@@ -1,0 +1,7 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Description": "Create EC2 instances. Create Auto-Scale. Create Elastic Load Balancer",
+
+    "Parameters": {}
+}

@@ -1,0 +1,142 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Security Group resources for TeamTasker",
+    "Resources": {
+        "SGEFS": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "SGEFSTeamTasker",
+                "GroupDescription": "Allow inbound NFS traffic on port 2049",
+                "SecurityGroupIngress": [{
+                    "IpProtocol": "tcp",
+                    "FromPort": "2049",
+                    "ToPort": "2049",
+                    "CidrIp": "0.0.0.0/0"
+                }],
+                "SecurityGroupEgress": []
+            },
+            "VpcId": {
+                "Ref": "VPCTeamTaskerLondon"
+            },
+            "Tags": [{
+                "Key": "Name",
+                "Value": "SG_EFS_TeamTasker"
+            }]
+        },
+        "SGMySQL": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "SGMYSQLTeamTasker",
+                "GroupDescription": "Allow inbound MySQL traffic on port 3306",
+                "SecurityGroupIngress": [{
+                    "IpProtocol": "tcp",
+                    "FromPort": "3306",
+                    "ToPort": "3306",
+                    "CidrIp": "0.0.0.0/0"
+                }],
+                "SecurityGroupEgress": []
+            },
+            "VpcId": {
+                "Ref": "VPCTeamTaskerLondon"
+            },
+            "Tags": [{
+                "Key": "Name",
+                "Value": "SG_MySQL_TeamTasker"
+            }]
+        },
+        "SGELB": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "SGELBTeamTasker",
+                "GroupDescription": "Allow inbound HTTP and HTTPS",
+                "SecurityGroupIngress": [{
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress": []
+            },
+            "VpcId": {
+                "Ref": "VPCTeamTaskerLondon"
+            },
+            "Tags": [{
+                "Key": "Name",
+                "Value": "SG_ELB_TeamTasker"
+            }]
+        },
+        "SGEC2": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "SGEC2TeamTasker",
+                "GroupDescription": "Allow inbound HTTP, HTTPS and SSH traffic. Allow outbound HTTP, HTTPS, SSH and MYSQL",
+                "SecurityGroupIngress": [{
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": {
+                            "Fn::GetAtt": ["SGELB", "GroupId"]
+                        }
+                    }
+                ],
+                "SecurityGroupEgress": [{
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "3306",
+                        "ToPort": "3306",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            },
+            "VpcId": {
+                "Ref": "VPCTeamTaskerLondon"
+            },
+            "Tags": [{
+                "Key": "Name",
+                "Value": "SG_EC2_TeamTasker"
+            }]
+        }
+    }
+}

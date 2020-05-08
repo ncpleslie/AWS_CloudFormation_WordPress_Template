@@ -1,0 +1,19 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Create S3 bucket for object storage",
+    "Resources": {
+        "S3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "BucketName": "TeamTasker_S3",
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": false,
+                    "BlockPublicPolicy": false,
+                    "IgnorePublicAcls": false,
+                    "RestrictPublicBuckets": false
+                }
+            }
+        }
+    }
+}

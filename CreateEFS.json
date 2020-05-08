@@ -1,0 +1,45 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Create EFS",
+    "Parameters": {
+        "Resources": {
+            "EFS": {
+                "Type": "AWS::EFS::FileSystem",
+                "Properties": {
+                    "Encrypted": false,
+                    "PerformanceMode": "generalPurpose",
+                    "ThroughputMode": "bursting",
+                    "LifecyclePolicies": "AFTER_14_DAYS"
+                }
+            },
+            "EFSTargetMountAZA": {
+                "Type": "AWS::EFS::MountTarget",
+                "Properties": {
+                    "FileSystemId": {
+                        "Ref": "EFS"
+                    },
+                    "SecurityGroups": [{
+                        "Ref": "SGEFS"
+                    }],
+                    "SubnetId": {
+                        "Ref": "PrivateSNEC2TeamTaskerAZA"
+                    }
+                }
+            },
+            "EFSTargetMountAZB": {
+                "Type": "AWS::EFS::MountTarget",
+                "Properties": {
+                    "FileSystemId": {
+                        "Ref": "EFS"
+                    },
+                    "SecurityGroups": [{
+                        "Ref": "SGEFS"
+                    }],
+                    "SubnetId": {
+                        "Ref": "PrivateSNEC2TeamTaskerAZB"
+                    }
+                }
+            }
+        }
+    }
+}

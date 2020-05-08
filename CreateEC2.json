@@ -1,0 +1,164 @@
+"WebServer": {
+    "Type": "AWS::EC2::Instance",
+    "Metadata": {
+        "AWS::CloudFormation::Init": {
+            "config": {
+                "packages": {
+                    "yum": {
+                        "httpd": [],
+                        "php": [],
+                        "php-mysql": [],
+                        "php-gd": [],
+                        "php-xml": [],
+                        "php-mbstring": [],
+                        "mysql": [],
+                        "mysql-server": [],
+                        "mysql-devel": [],
+                        "mysql-libs": []
+
+                    }
+                },
+
+                "sources": {
+                    "/var/www/html": "http://ftp.drupal.org/files/projects/drupal-7.8.tar.gz",
+                    "/home/ec2-user": "http://ftp.drupal.org/files/projects/drush-7.x-4.5.tar.gz"
+                },
+
+                "files": {
+                    "/tmp/setup.mysql": {
+                        "content": {
+                            "Fn::Join": ["", [
+                                "CREATE DATABASE ", {
+                                    "Ref": "DBName"
+                                }, ";\n",
+                                "CREATE USER '", {
+                                    "Ref": "DBUsername"
+                                }, "'@'localhost' IDENTIFIED BY '", {
+                                    "Ref": "DBPassword"
+                                }, "';\n",
+                                "GRANT ALL ON ", {
+                                    "Ref": "DBName"
+                                }, ".* TO '", {
+                                    "Ref": "DBUsername"
+                                }, "'@'localhost';\n",
+                                "FLUSH PRIVILEGES;\n"
+                            ]]
+                        },
+                        "mode": "000644",
+                        "owner": "root",
+                        "group": "root"
+                    }
+                },
+
+                "services": {
+                    "sysvinit": {
+                        "httpd": {
+                            "enabled": "true",
+                            "ensureRunning": "true"
+                        },
+                        "mysqld": {
+                            "enabled": "true",
+                            "ensureRunning": "true"
+                        },
+                        "sendmail": {
+                            "enabled": "false",
+                            "ensureRunning": "false"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "Properties": {
+        "ImageId": {
+            "Fn::FindInMap": ["AWSRegionArch2AMI", {
+                    "Ref": "AWS::Region"
+                },
+                {
+                    "Fn::FindInMap": ["AWSInstanceType2Arch", {
+                        "Ref": "InstanceType"
+                    }, "Arch"]
+                }
+            ]
+        },
+        "InstanceType": {
+            "Ref": "InstanceType"
+        },
+        "SecurityGroups": [{
+            "Ref": "WebServerSecurityGroup"
+        }],
+        "KeyName": {
+            "Ref": "KeyName"
+        },
+        "UserData": {
+            "Fn::Base64": {
+                "Fn::Join": ["", [
+                    "#!/bin/bash -v\n",
+                    "yum update -y aws-cfn-bootstrap\n",
+
+
+                    "# Helper function\n",
+                    "function error_exit\n",
+                    "{\n",
+                    "  /opt/aws/bin/cfn-signal -e 0 -r \"$1\" '", {
+                        "Ref": "WaitHandle"
+                    }, "'\n",
+                    "  exit 1\n",
+                    "}\n",
+
+                    "# Install Apache Web Server, MySQL, PHP and Drupal\n",
+                    "/opt/aws/bin/cfn-init -s ", {
+                        "Ref": "AWS::StackId"
+                    }, " -r WebServer ",
+                    "    --region ", {
+                        "Ref": "AWS::Region"
+                    }, " || error_exit 'Failed to run cfn-init'\n",
+
+                    "# Setup MySQL root password and create a user\n",
+                    "mysqladmin -u root password '", {
+                        "Ref": "DBRootPassword"
+                    }, "' || error_exit 'Failed to initialize root password'\n",
+                    "mysql -u root --password='", {
+                        "Ref": "DBRootPassword"
+                    }, "' < /tmp/setup.mysql || error_exit 'Failed to create database user'\n",
+
+                    "# Make changes to Apache Web Server configuration\n",
+                    "mv /var/www/html/drupal-7.8/* /var/www/html\n",
+                    "mv /var/www/html/drupal-7.8/.* /var/www/html\n",
+                    "rmdir /var/www/html/drupal-7.8\n",
+                    "sed -i 's/AllowOverride None/AllowOverride All/g'  /etc/httpd/conf/httpd.conf\n",
+                    "service httpd restart\n",
+
+                    "# Create the site in Drupal\n",
+                    "cd /var/www/html\n",
+                    "~ec2-user/drush/drush site-install standard --yes",
+                    "     --site-name='", {
+                        "Ref": "SiteName"
+                    }, "' --site-mail=", {
+                        "Ref": "SiteEMail"
+                    },
+                    "     --account-name=", {
+                        "Ref": "SiteAdmin"
+                    }, " --account-pass=", {
+                        "Ref": "SitePassword"
+                    },
+                    "     --db-url=mysql://", {
+                        "Ref": "DBUsername"
+                    }, ":", {
+                        "Ref": "DBPassword"
+                    }, "@localhost/", {
+                        "Ref": "DBName"
+                    },
+                    "     --db-prefix=drupal_\n",
+                    "chown apache:apache sites/default/files\n",
+
+                    "# All is well so signal success\n",
+                    "/opt/aws/bin/cfn-signal -e 0 -r \"Drupal setup complete\" '", {
+                        "Ref": "WaitHandle"
+                    }, "'\n"
+
+                ]]
+            }
+        }
+    }
+}

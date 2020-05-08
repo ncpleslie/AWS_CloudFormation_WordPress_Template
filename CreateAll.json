@@ -1,0 +1,518 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Launching resources for TeamTasker",
+    "Resources": {
+        "VPCTeamTaskerLondon": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "192.168.0.0/16",
+                "EnableDnsSupport": "true",
+                "EnableDnsHostnames": "true",
+                "InstanceTenancy": "default",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "TeamTasker_London"
+                }]
+            }
+        },
+        "InternetGateway": {
+            "Type": "AWS::EC2::InternetGateway"
+        },
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "InternetGatewayId": {
+                    "Ref": "InternetGateway"
+                }
+            }
+        },
+        "PublicSNTeamTaskerAZA": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "MapPublicIpOnLaunch": true,
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "CidrBlock": "192.168.1.0/24",
+                "AvailabilityZone": "ap-southeast-2a",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Public_SN_TeamTasker-AZ_A"
+                }]
+            }
+        },
+        "PublicSNTeamTaskerAZB": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "MapPublicIpOnLaunch": true,
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "CidrBlock": "192.168.2.0/24",
+                "AvailabilityZone": "ap-southeast-2b",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Public_SN_TeamTasker-AZ_B"
+                }]
+            }
+        },
+        "PrivateSNEC2TeamTaskerAZA": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "MapPublicIpOnLaunch": false,
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "CidrBlock": "192.168.4.0/24",
+                "AvailabilityZone": "ap-southeast-2a",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Private_SN_EC2_TeamTasker-AZ_A"
+                }]
+            }
+        },
+        "PrivateSNEC2TeamTaskerAZB": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "MapPublicIpOnLaunch": false,
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "CidrBlock": "192.168.5.0/24",
+                "AvailabilityZone": "ap-southeast-2b",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Private_SN_EC2_TeamTasker-AZ_B"
+                }]
+            }
+        },
+        "PrivateSNRDSTeamTaskerAZA": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "MapPublicIpOnLaunch": false,
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "CidrBlock": "192.168.7.0/24",
+                "AvailabilityZone": "ap-southeast-2a",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Private_SN_RDS_TeamTasker-AZ_A"
+                }]
+            }
+        },
+        "PrivateSNRDSTeamTaskerAZB": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "MapPublicIpOnLaunch": false,
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "CidrBlock": "192.168.8.0/24",
+                "AvailabilityZone": "ap-southeast-2b",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Private_SN_RDS_TeamTasker-AZ_B"
+                }]
+            }
+        },
+        "NatGatewayEIPAZA": {
+            "Type": "AWS::EC2::EIP",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "Domain": "vpc",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "EIP_TeamTasker_AZ-A"
+                }]
+            }
+        },
+        "NatGatewayEIPAZB": {
+            "Type": "AWS::EC2::EIP",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "Domain": "vpc",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "EIP_TeamTasker_AZ-B"
+                }]
+            }
+        },
+        "NatGatewayAZA": {
+            "Type": "AWS::EC2::NatGateway",
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": ["NatGatewayEIPAZA", "AllocationId"]
+                },
+                "SubnetId": {
+                    "Ref": "PublicSNTeamTaskerAZA"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "NAT_TeamTasker_AZ-A"
+                }]
+            }
+        },
+        "NatGatewayAZB": {
+            "Type": "AWS::EC2::NatGateway",
+            "Properties": {
+                "AllocationId": {
+                    "Fn::GetAtt": ["NatGatewayEIPAZB", "AllocationId"]
+                },
+                "SubnetId": {
+                    "Ref": "PublicSNTeamTaskerAZB"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "NAT_TeamTasker_AZ-B"
+                }]
+            }
+        },
+        "PublicRTTeamTasker": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Public_RT_TeamTasker"
+                }]
+            }
+        },
+        "DefaultPublicRoute": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRTTeamTasker"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "InternetGateway"
+                }
+            }
+        },
+        "PublicSNTeamTaskerAZARouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRTTeamTasker"
+                },
+                "SubnetId": {
+                    "Ref": "PublicSNTeamTaskerAZA"
+                }
+            }
+        },
+        "PublicSNTeamTaskerAZBRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PublicRTTeamTasker"
+                },
+                "SubnetId": {
+                    "Ref": "PublicSNTeamTaskerAZB"
+                }
+            }
+        },
+        "PrivateRTEC2TeamTaskerAZA": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Private_RT_EC2_TeamTasker_AZ-A"
+                }]
+            }
+        },
+        "DefaultPrivateRouteAZA": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PrivateRTEC2TeamTaskerAZA"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NatGatewayId": {
+                    "Ref": "NatGatewayAZA"
+                }
+            }
+        },
+        "PrivateSubnetAZARouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PrivateRTEC2TeamTaskerAZA"
+                },
+                "SubnetId": {
+                    "Ref": "PrivateSNEC2TeamTaskerAZA"
+                }
+            }
+        },
+        "PrivateRTEC2TeamTaskerAZB": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Private_RT_EC2_TeamTasker_AZ-B"
+                }]
+            }
+        },
+        "DefaultPrivateRouteAZB": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PrivateRTEC2TeamTaskerAZB"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NatGatewayId": {
+                    "Ref": "NatGatewayAZB"
+                }
+            }
+        },
+        "PrivateSubnetAZBRouteTableAssociation": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "PrivateRTEC2TeamTaskerAZB"
+                },
+                "SubnetId": {
+                    "Ref": "PrivateSNEC2TeamTaskerAZB"
+                }
+            }
+        },
+        "SGEFS": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "SGEFSTeamTasker",
+                "GroupDescription": "Allow inbound NFS traffic on port 2049",
+                "SecurityGroupIngress": [{
+                    "IpProtocol": "tcp",
+                    "FromPort": "2049",
+                    "ToPort": "2049",
+                    "CidrIp": "0.0.0.0/0"
+                }],
+                "SecurityGroupEgress": [],
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "SG_EFS_TeamTasker"
+                }]
+            }
+        },
+        "SGMySQL": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "SGMYSQLTeamTasker",
+                "GroupDescription": "Allow inbound MySQL traffic on port 3306",
+                "SecurityGroupIngress": [{
+                    "IpProtocol": "tcp",
+                    "FromPort": "3306",
+                    "ToPort": "3306",
+                    "CidrIp": "0.0.0.0/0"
+                }],
+                "SecurityGroupEgress": [],
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "SG_MySQL_TeamTasker"
+                }]
+            }
+        },
+        "SGELB": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "SGELBTeamTasker",
+                "GroupDescription": "Allow inbound HTTP and HTTPS",
+                "SecurityGroupIngress": [{
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress": [],
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "SG_ELB_TeamTasker"
+                }]
+            }
+        },
+        "SGEC2": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupName": "SGEC2TeamTasker",
+                "GroupDescription": "Allow inbound HTTP, HTTPS and SSH traffic. Allow outbound HTTP, HTTPS, SSH and MYSQL",
+                "SecurityGroupIngress": [{
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": {
+                            "Fn::GetAtt": ["SGELB", "GroupId"]
+                        }
+                    }
+                ],
+                "SecurityGroupEgress": [{
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "3306",
+                        "ToPort": "3306",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "SG_EC2_TeamTasker"
+                }]
+            }
+        },
+        "RDSSubnetGroup": {
+            "Type": "AWS::RDS::DBSubnetGroup",
+            "Properties": {
+                "DBSubnetGroupDescription": "Data subnets for team tasker",
+                "SubnetIds": [{
+                        "Ref": "PrivateSNRDSTeamTaskerAZA"
+                    },
+                    {
+                        "Ref": "PrivateSNRDSTeamTaskerAZB"
+                    }
+                ],
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "Team_Tasker_RDS_Data_Subnet"
+                }]
+            }
+        },
+        "TeamTaskerRDS": {
+            "Type": "AWS::RDS::DBInstance",
+            "Properties": {
+                "AllowMajorVersionUpgrade": false,
+                "AutoMinorVersionUpgrade": true,
+                "DBInstanceIdentifier": "wordpress",
+                "DBName": "wordpress",
+                "Engine": "MySQL",
+                "EngineVersion": "8.0.16",
+                "AllocatedStorage": "20",
+                "MultiAZ": "true",
+                "MasterUsername": "admin",
+                "MasterUserPassword": "password",
+                "DBInstanceClass": "db.t2.micro",
+                "DBSubnetGroupName": {
+                    "Ref": "RDSSubnetGroup"
+                },
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "TeamTasker_WordPress_RDS"
+                }]
+            }
+        },
+        "EFS": {
+            "Type": "AWS::EFS::FileSystem",
+            "Properties": {
+                "Encrypted": false,
+                "PerformanceMode": "generalPurpose",
+                "ThroughputMode": "bursting",
+                "LifecyclePolicies": "AFTER_14_DAYS"
+            }
+        },
+        "EFSTargetMountAZA": {
+            "Type": "AWS::EFS::MountTarget",
+            "Properties": {
+                "FileSystemId": {
+                    "Ref": "EFS"
+                },
+                "SecurityGroups": [{
+                    "Ref": "SGEFS"
+                }],
+                "SubnetId": {
+                    "Ref": "PrivateSNEC2TeamTaskerAZA"
+                }
+            }
+        },
+        "EFSTargetMountAZB": {
+            "Type": "AWS::EFS::MountTarget",
+            "Properties": {
+                "FileSystemId": {
+                    "Ref": "EFS"
+                },
+                "SecurityGroups": [{
+                    "Ref": "SGEFS"
+                }],
+                "SubnetId": {
+                    "Ref": "PrivateSNEC2TeamTaskerAZB"
+                }
+            }
+        },
+        "S3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+                "BucketName": "TeamTasker_S3",
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": false,
+                    "BlockPublicPolicy": false,
+                    "IgnorePublicAcls": false,
+                    "RestrictPublicBuckets": false
+                }
+            }
+        }
+    }
+}
