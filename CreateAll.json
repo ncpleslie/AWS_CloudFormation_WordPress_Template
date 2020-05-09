@@ -380,14 +380,6 @@
                         "FromPort": "443",
                         "ToPort": "443",
                         "CidrIp": "0.0.0.0/0"
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
-                        "CidrIp": {
-                            "Fn::GetAtt": ["SGELB", "GroupId"]
-                        }
                     }
                 ],
                 "SecurityGroupEgress": [{
@@ -424,6 +416,20 @@
                 }]
             }
         },
+        "RDSSG": {
+            "Type": "AWS::RDS::DBSecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow inbound MySQL traffic on port 3306. Based on SGMySQL",
+                "DBSecurityGroupIngress": [{
+                    "EC2SecurityGroupId": {
+                        "Ref": "SGMySQL"
+                    }
+                }],
+                "EC2VpcId": {
+                    "Ref": "VPCTeamTaskerLondon"
+                }
+            }
+        },
         "RDSSubnetGroup": {
             "Type": "AWS::RDS::DBSubnetGroup",
             "Properties": {
@@ -455,6 +461,9 @@
                 "MasterUsername": "admin",
                 "MasterUserPassword": "password",
                 "DBInstanceClass": "db.t2.micro",
+                "DBSecurityGroups": [{
+                    "Ref": "RDSSG"
+                }],
                 "DBSubnetGroupName": {
                     "Ref": "RDSSubnetGroup"
                 },
@@ -470,7 +479,9 @@
                 "Encrypted": false,
                 "PerformanceMode": "generalPurpose",
                 "ThroughputMode": "bursting",
-                "LifecyclePolicies": "AFTER_14_DAYS"
+                "LifecyclePolicies": [{
+                    "TransitionToIA": "AFTER_14_DAYS"
+                }]
             }
         },
         "EFSTargetMountAZA": {
@@ -505,13 +516,142 @@
             "Type": "AWS::S3::Bucket",
             "DeletionPolicy": "Retain",
             "Properties": {
-                "BucketName": "TeamTasker_S3",
+                "BucketName": "teamtasker",
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": false,
                     "BlockPublicPolicy": false,
                     "IgnorePublicAcls": false,
                     "RestrictPublicBuckets": false
                 }
+            }
+        },
+        "TeamTaskerELB": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "HealthCheck": {
+                    "Target": "HTTP:80/health_check.html",
+                    "HealthyThreshold": "3",
+                    "UnhealthyThreshold": "5",
+                    "Interval": "30",
+                    "Timeout": "5"
+                },
+                "CrossZone": true,
+                "Listeners": [{
+                    "LoadBalancerPort": "80",
+                    "InstancePort": "80",
+                    "Protocol": "HTTP"
+                }],
+                "SecurityGroups": [{
+                    "Ref": "SGELB"
+                }],
+                "Subnets": [{
+                    "Ref": "PublicSNTeamTaskerAZA"
+                }, {
+                    "Ref": "PublicSNTeamTaskerAZB"
+                }]
+            }
+        },
+        "TeamTaskerASG": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "AutoScalingGroupName": "ASCTeamTasker",
+                "MinSize": "2",
+                "MaxSize": "4",
+                "HealthCheckGracePeriod": 200,
+                "HealthCheckType": "ELB",
+                "LoadBalancerNames": [{
+                    "Ref": "TeamTaskerELB"
+                }],
+                "LaunchConfigurationName": {
+                    "Ref": "EC2WordPressConfig"
+                },
+                "VPCZoneIdentifier": [{
+                    "Ref": "PrivateSNEC2TeamTaskerAZA"
+                }, {
+                    "Ref": "PrivateSNEC2TeamTaskerAZB"
+                }],
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "TeamTaskerASG",
+                    "PropagateAtLaunch": "false"
+                }, {
+                    "Key": "Purpose",
+                    "Value": "WebServerGroup",
+                    "PropagateAtLaunch": "false"
+                }]
+            }
+        },
+        "ScheduledASGLondonMorningIn": {
+            "Type": "AWS::AutoScaling::ScheduledAction",
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "MaxSize": "5",
+                "MinSize": "3",
+                "Recurrence": "0 6 * * *"
+            }
+        },
+        "ScheduledASGLondonMorningOut": {
+            "Type": "AWS::AutoScaling::ScheduledAction",
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "MaxSize": "5",
+                "MinSize": "2",
+                "Recurrence": "0 8 * * *"
+            }
+        },
+        "ScheduledASGLondonAfternoonIn": {
+            "Type": "AWS::AutoScaling::ScheduledAction",
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "MaxSize": "5",
+                "MinSize": "3",
+                "Recurrence": "0 15 * * *"
+            }
+        },
+        "ScheduledASGLondonAfternoonOut": {
+            "Type": "AWS::AutoScaling::ScheduledAction",
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "MaxSize": "5",
+                "MinSize": "2",
+                "Recurrence": "0 17 * * *"
+            }
+        },
+        "EC2WordPressConfig": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "ImageId": "ami-0970010f37c4f9c8d",
+                "InstanceType": "t2.micro",
+                "KeyName": "teamtasker-key",
+                "SecurityGroups": [{
+                    "Ref": "SGEC2"
+                }]
+            }
+        },
+        "EC2TeamTasker": {
+            "Type": "AWS::EC2::Instance",
+            "Properties": {
+                "ImageId": "ami-0970010f37c4f9c8d",
+                "InstanceType": "t2.micro",
+                "SecurityGroupIds": [{
+                    "Ref": "SGEC2"
+                }],
+                "SubnetId": {
+                    "Ref": "PublicSNTeamTaskerAZA"
+                },
+                "KeyName": "teamtasker-key",
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "TeamTaskerBastion"
+                }]
             }
         }
     }
