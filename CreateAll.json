@@ -318,7 +318,9 @@
                     "IpProtocol": "tcp",
                     "FromPort": "3306",
                     "ToPort": "3306",
-                    "CidrIp": "0.0.0.0/0"
+                    "SourceSecurityGroupId": {
+                        "Ref": "SGEC2"
+                    }
                 }],
                 "SecurityGroupEgress": [],
                 "VpcId": {
@@ -367,7 +369,9 @@
                         "IpProtocol": "tcp",
                         "FromPort": "80",
                         "ToPort": "80",
-                        "CidrIp": "0.0.0.0/0"
+                        "SourceSecurityGroupId": {
+                            "Ref": "SGELB"
+                        }
                     },
                     {
                         "IpProtocol": "tcp",
@@ -379,7 +383,9 @@
                         "IpProtocol": "tcp",
                         "FromPort": "443",
                         "ToPort": "443",
-                        "CidrIp": "0.0.0.0/0"
+                        "SourceSecurityGroupId": {
+                            "Ref": "SGELB"
+                        }
                     }
                 ],
                 "SecurityGroupEgress": [{
@@ -531,7 +537,7 @@
                 "HealthCheck": {
                     "Target": "HTTP:80/health_check.html",
                     "HealthyThreshold": "3",
-                    "UnhealthyThreshold": "5",
+                    "UnhealthyThreshold": "10",
                     "Interval": "30",
                     "Timeout": "5"
                 },
@@ -548,6 +554,10 @@
                     "Ref": "PublicSNTeamTaskerAZA"
                 }, {
                     "Ref": "PublicSNTeamTaskerAZB"
+                }],
+                "Tags": [{
+                    "Key": "Name",
+                    "Value": "TeamTaskerELB"
                 }]
             }
         },
@@ -598,7 +608,7 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "MaxSize": "5",
+                "MaxSize": "4",
                 "MinSize": "2",
                 "Recurrence": "0 8 * * *"
             }
@@ -620,7 +630,7 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "MaxSize": "5",
+                "MaxSize": "4",
                 "MinSize": "2",
                 "Recurrence": "0 17 * * *"
             }
@@ -628,29 +638,11 @@
         "EC2WordPressConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
-                "ImageId": "ami-0970010f37c4f9c8d",
+                "ImageId": "ami-03af716335912a41a",
                 "InstanceType": "t2.micro",
                 "KeyName": "teamtasker-key",
                 "SecurityGroups": [{
                     "Ref": "SGEC2"
-                }]
-            }
-        },
-        "EC2TeamTasker": {
-            "Type": "AWS::EC2::Instance",
-            "Properties": {
-                "ImageId": "ami-0970010f37c4f9c8d",
-                "InstanceType": "t2.micro",
-                "SecurityGroupIds": [{
-                    "Ref": "SGEC2"
-                }],
-                "SubnetId": {
-                    "Ref": "PublicSNTeamTaskerAZA"
-                },
-                "KeyName": "teamtasker-key",
-                "Tags": [{
-                    "Key": "Name",
-                    "Value": "TeamTaskerBastion"
                 }]
             }
         }
