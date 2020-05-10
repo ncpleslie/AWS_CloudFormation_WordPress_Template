@@ -322,7 +322,6 @@
                         "Ref": "SGEC2"
                     }
                 }],
-                "SecurityGroupEgress": [],
                 "VpcId": {
                     "Ref": "VPCTeamTaskerLondon"
                 },
@@ -388,31 +387,6 @@
                         }
                     }
                 ],
-                "SecurityGroupEgress": [{
-                        "IpProtocol": "tcp",
-                        "FromPort": "22",
-                        "ToPort": "22",
-                        "CidrIp": "0.0.0.0/0"
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
-                        "CidrIp": "0.0.0.0/0"
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "443",
-                        "ToPort": "443",
-                        "CidrIp": "0.0.0.0/0"
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "3306",
-                        "ToPort": "3306",
-                        "CidrIp": "0.0.0.0/0"
-                    }
-                ],
                 "VpcId": {
                     "Ref": "VPCTeamTaskerLondon"
                 },
@@ -420,20 +394,6 @@
                     "Key": "Name",
                     "Value": "SG_EC2_TeamTasker"
                 }]
-            }
-        },
-        "RDSSG": {
-            "Type": "AWS::RDS::DBSecurityGroup",
-            "Properties": {
-                "GroupDescription": "Allow inbound MySQL traffic on port 3306. Based on SGMySQL",
-                "DBSecurityGroupIngress": [{
-                    "EC2SecurityGroupId": {
-                        "Ref": "SGMySQL"
-                    }
-                }],
-                "EC2VpcId": {
-                    "Ref": "VPCTeamTaskerLondon"
-                }
             }
         },
         "RDSSubnetGroup": {
@@ -467,8 +427,8 @@
                 "MasterUsername": "admin",
                 "MasterUserPassword": "password",
                 "DBInstanceClass": "db.t2.micro",
-                "DBSecurityGroups": [{
-                    "Ref": "RDSSG"
+                "VPCSecurityGroups": [{
+                    "Fn::GetAtt": ["SGMySQL", "GroupId"]
                 }],
                 "DBSubnetGroupName": {
                     "Ref": "RDSSubnetGroup"
@@ -638,12 +598,36 @@
         "EC2WordPressConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
-                "ImageId": "ami-03af716335912a41a",
+                "ImageId": "ami-0970010f37c4f9c8d",
                 "InstanceType": "t2.micro",
                 "KeyName": "teamtasker-key",
                 "SecurityGroups": [{
                     "Ref": "SGEC2"
-                }]
+                }],
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": ["", [
+                            "#!/bin/bash\n",
+                            "sudo yum update -y && sudo yum upgrade -y && sudo yum install -y httpd && sudo amazon-linux-extras install php7.2 && sudo yum install -y php-mysql\n",
+                            "cd /tmp\n",
+                            "curl -LO https://wordpress.org/latest.tar.gz\n",
+                            "tar xzvf latest.tar.gz\n",
+                            "sudo cp -a /tmp/wordpress/. /var/www/html\n",
+                            "echo success > /var/www/html/health_check.html\n",
+                            "sudo systemctl restart httpd\n",
+                            "DBUSERNAME=admin\n",
+                            "DBPASSWD=password\n",
+                            "DBNAME=wordpress\n",
+                            "DBSITE=", {
+                                "Fn::GetAtt": ["TeamTaskerRDS", "Endpoint.Address"]
+                            }, "\n",
+                            "curl https://api.wordpress.org/secret-key/1.1/salt/ > /tmp/salt.txt\n",
+                            "sed -i \"/NONCE_SALT/r /tmp/salt.txt\" /var/www/html/wp-config-sample.php\n",
+                            "cat /var/www/html/wp-config-sample.php | sed \"s/username_here/${DBUSERNAME}/;s/password_here/${DBPASSWD}/;s/database_name_here/${DBNAME}/;s/localhost/${DBSITE}/\" > /tmp/wp-config.tmp\n",
+                            "grep -v 'put your unique phrase here' /tmp/wp-config.tmp > /var/www/html/wp-config.php\n"
+                        ]]
+                    }
+                }
             }
         }
     }
