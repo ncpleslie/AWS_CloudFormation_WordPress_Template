@@ -608,23 +608,35 @@
                     "Fn::Base64": {
                         "Fn::Join": ["", [
                             "#!/bin/bash\n",
-                            "sudo yum update -y && sudo yum upgrade -y && sudo yum install -y httpd && sudo amazon-linux-extras install php7.2 && sudo yum install -y php-mysql\n",
-                            "cd /tmp\n",
-                            "curl -LO https://wordpress.org/latest.tar.gz\n",
-                            "tar xzvf latest.tar.gz\n",
-                            "sudo cp -a /tmp/wordpress/. /var/www/html\n",
-                            "echo success > /var/www/html/health_check.html\n",
-                            "sudo systemctl restart httpd\n",
-                            "DBUSERNAME=admin\n",
-                            "DBPASSWD=password\n",
-                            "DBNAME=wordpress\n",
-                            "DBSITE=", {
+                            "yum update -y && yum upgrade -y && yum install -y httpd && amazon-linux-extras install php7.2 && yum install -y php-mysql\n",
+                            "yum install -y amazon-efs-utils\n",
+                            "file_system_id=", {
+                                "Ref": "EFS"
+                            }, "\n",
+                            "efs_mount_point=/var/www\n",
+                            "mkdir -p \"${efs_mount_point}\"\n",
+                            "sudo mount -t efs ${file_system_id}:/ ${efs_mount_point}\n",
+                            "\n",
+                            "if [ ! -d /var/www/html", " ]; then\n",
+                            "   mkdir -p /var/www/html\n",
+                            "   cd /tmp/\n",
+                            "   curl -LO https://wordpress.org/latest.tar.gz\n",
+                            "   tar xzvf latest.tar.gz\n",
+                            "   cp -a /tmp/wordpress/. /var/www/html\n",
+                            "   echo success > /var/www/html/health_check.html\n",
+                            "   systemctl restart httpd\n",
+                            "   DBUSERNAME=admin\n",
+                            "   DBPASSWD=password\n",
+                            "   DBNAME=wordpress\n",
+                            "   DBSITE=", {
                                 "Fn::GetAtt": ["TeamTaskerRDS", "Endpoint.Address"]
                             }, "\n",
-                            "curl https://api.wordpress.org/secret-key/1.1/salt/ > /tmp/salt.txt\n",
-                            "sed -i \"/NONCE_SALT/r /tmp/salt.txt\" /var/www/html/wp-config-sample.php\n",
-                            "cat /var/www/html/wp-config-sample.php | sed \"s/username_here/${DBUSERNAME}/;s/password_here/${DBPASSWD}/;s/database_name_here/${DBNAME}/;s/localhost/${DBSITE}/\" > /tmp/wp-config.tmp\n",
-                            "grep -v 'put your unique phrase here' /tmp/wp-config.tmp > /var/www/html/wp-config.php\n"
+                            "   curl https://api.wordpress.org/secret-key/1.1/salt/ > /tmp/salt.txt\n",
+                            "   sed -i \"/NONCE_SALT/r /tmp/salt.txt\" /var/www/html/wp-config-sample.php\n",
+                            "   cat /var/www/html/wp-config-sample.php | sed \"s/username_here/${DBUSERNAME}/;s/password_here/${DBPASSWD}/;s/database_name_here/${DBNAME}/;s/localhost/${DBSITE}/\" > /tmp/wp-config.tmp\n",
+                            "   grep -v 'put your unique phrase here' /tmp/wp-config.tmp > /var/www/html/wp-config.php\n",
+                            "fi\n",
+                            "systemctl restart httpd\n"
                         ]]
                     }
                 }
