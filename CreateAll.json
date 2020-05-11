@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description": "Launching resources for TeamTasker",
+    "Description": "Create the infrastructure, web and data tier for TeamTasker's multi-AZ WordPress website. Creates a VPC with two AZs. Creates 3 subnets in each AZ. One is public facing and two are private. Create the security groups. Creates a multi-AZ RDS, EFS for storage that is split across all EC2 instances. An ELB is created and an ASG. The ASG has time-based instances as well based on peak times set out by TeamTasker. Finally, an EC2 config is created to the ASG. This instance attaches the EFS, if wordpress is installed in it then it is done. Otherwise, it installs wordpress.",
     "Resources": {
         "VPCTeamTaskerLondon": {
             "Type": "AWS::EC2::VPC",
@@ -478,19 +478,6 @@
                 }
             }
         },
-        "S3Bucket": {
-            "Type": "AWS::S3::Bucket",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-                "BucketName": "teamtasker",
-                "PublicAccessBlockConfiguration": {
-                    "BlockPublicAcls": false,
-                    "BlockPublicPolicy": false,
-                    "IgnorePublicAcls": false,
-                    "RestrictPublicBuckets": false
-                }
-            }
-        },
         "TeamTaskerELB": {
             "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
             "Properties": {
@@ -635,11 +622,35 @@
                             "   sed -i \"/NONCE_SALT/r /tmp/salt.txt\" /var/www/html/wp-config-sample.php\n",
                             "   cat /var/www/html/wp-config-sample.php | sed \"s/username_here/${DBUSERNAME}/;s/password_here/${DBPASSWD}/;s/database_name_here/${DBNAME}/;s/localhost/${DBSITE}/\" > /tmp/wp-config.tmp\n",
                             "   grep -v 'put your unique phrase here' /tmp/wp-config.tmp > /var/www/html/wp-config.php\n",
+                            "   chown -R apache:apache /var/www/html\n",
+                            "   cd /tmp/\n",
+                            "   wget http://us-east-1-aws-training.s3.amazonaws.com/self-paced-lab-4/examplefiles-as.zip\n",
+                            "   unzip examplefiles-as.zip\n",
+                            "   mkdir /var/www/html/loadtest\n",
+                            "   mv examplefiles-as/* /var/www/html/loadtest\n",
                             "fi\n",
                             "systemctl restart httpd\n"
                         ]]
                     }
                 }
+            }
+        },
+        "AddToHostedZone": {
+            "Type": "AWS::Route53::RecordSetGroup",
+            "Properties": {
+                "HostedZoneName": "nickleslie.teamtasker.com.",
+                "RecordSets": [{
+                    "Name": "nickleslie.teamtasker.com.",
+                    "Type": "A",
+                    "AliasTarget": {
+                        "DNSName": {
+                            "Fn::GetAtt": ["TeamTaskerELB", "DNSName"]
+                        },
+                        "HostedZoneId": {
+                            "Fn::GetAtt": ["TeamTaskerELB", "CanonicalHostedZoneNameID"]
+                        }
+                    }
+                }]
             }
         }
     }
