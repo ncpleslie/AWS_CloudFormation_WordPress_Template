@@ -530,12 +530,72 @@
                 "Tags": [{
                     "Key": "Name",
                     "Value": "TeamTaskerASG",
-                    "PropagateAtLaunch": "false"
-                }, {
-                    "Key": "Purpose",
-                    "Value": "WebServerGroup",
-                    "PropagateAtLaunch": "false"
+                    "PropagateAtLaunch": "true"
                 }]
+            }
+        },
+        "ASGUpPolicy": {
+            "Type": "AWS::AutoScaling::ScalingPolicy",
+            "Properties": {
+                "AdjustmentType": "ChangeInCapacity",
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "Cooldown": "60",
+                "ScalingAdjustment": "1"
+            }
+        },
+        "ASGDownPolicy": {
+            "Type": "AWS::AutoScaling::ScalingPolicy",
+            "Properties": {
+                "AdjustmentType": "ChangeInCapacity",
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "Cooldown": "60",
+                "ScalingAdjustment": "-1"
+            }
+        },
+        "HighCPUUsageAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/EC2",
+                "Statistic": "Average",
+                "Period": "60",
+                "EvaluationPeriods": "1",
+                "Threshold": "40",
+                "AlarmActions": [{
+                    "Ref": "ASGUpPolicy"
+                }],
+                "Dimensions": [{
+                    "Name": "AutoScalingGroupName",
+                    "Value": {
+                        "Ref": "TeamTaskerASG"
+                    }
+                }],
+                "ComparisonOperator": "GreaterThanThreshold"
+            }
+        },
+        "LowCPUUsageAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/EC2",
+                "Statistic": "Average",
+                "Period": "60",
+                "EvaluationPeriods": "1",
+                "Threshold": "25",
+                "AlarmActions": [{
+                    "Ref": "ASGDownPolicy"
+                }],
+                "Dimensions": [{
+                    "Name": "AutoScalingGroupName",
+                    "Value": {
+                        "Ref": "TeamTaskerASG"
+                    }
+                }],
+                "ComparisonOperator": "LessThanThreshold"
             }
         },
         "ScheduledASGLondonMorningIn": {
@@ -544,6 +604,7 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
+                "DesiredCapacity": "3",
                 "MaxSize": "5",
                 "MinSize": "3",
                 "Recurrence": "0 6 * * *"
@@ -555,6 +616,7 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
+                "DesiredCapacity": "2",
                 "MaxSize": "4",
                 "MinSize": "2",
                 "Recurrence": "0 8 * * *"
@@ -566,6 +628,7 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
+                "DesiredCapacity": "3",
                 "MaxSize": "5",
                 "MinSize": "3",
                 "Recurrence": "0 15 * * *"
@@ -577,6 +640,7 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
+                "DesiredCapacity": "2",
                 "MaxSize": "4",
                 "MinSize": "2",
                 "Recurrence": "0 17 * * *"
