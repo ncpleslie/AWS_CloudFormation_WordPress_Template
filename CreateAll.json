@@ -565,6 +565,7 @@
                 "Period": "60",
                 "EvaluationPeriods": "1",
                 "Threshold": "40",
+                "ComparisonOperator": "GreaterThanThreshold",
                 "AlarmActions": [{
                     "Ref": "ASGUpPolicy"
                 }],
@@ -573,8 +574,7 @@
                     "Value": {
                         "Ref": "TeamTaskerASG"
                     }
-                }],
-                "ComparisonOperator": "GreaterThanThreshold"
+                }]
             }
         },
         "LowCPUUsageAlarm": {
@@ -586,6 +586,7 @@
                 "Period": "60",
                 "EvaluationPeriods": "1",
                 "Threshold": "25",
+                "ComparisonOperator": "LessThanThreshold",
                 "AlarmActions": [{
                     "Ref": "ASGDownPolicy"
                 }],
@@ -594,8 +595,7 @@
                     "Value": {
                         "Ref": "TeamTaskerASG"
                     }
-                }],
-                "ComparisonOperator": "LessThanThreshold"
+                }]
             }
         },
         "ScheduledASGLondonMorningIn": {
@@ -646,6 +646,54 @@
                 "Recurrence": "0 17 * * *"
             }
         },
+        "ScheduledASGAsiaMorningIn": {
+            "Type": "AWS::AutoScaling::ScheduledAction",
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "DesiredCapacity": "3",
+                "MaxSize": "5",
+                "MinSize": "3",
+                "Recurrence": "0 22 * * *"
+            }
+        },
+        "ScheduledASGAsiaMorningOut": {
+            "Type": "AWS::AutoScaling::ScheduledAction",
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "DesiredCapacity": "2",
+                "MaxSize": "4",
+                "MinSize": "2",
+                "Recurrence": "0 0 * * *"
+            }
+        },
+        "ScheduledASGAsiaAfternoonIn": {
+            "Type": "AWS::AutoScaling::ScheduledAction",
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "DesiredCapacity": "3",
+                "MaxSize": "5",
+                "MinSize": "3",
+                "Recurrence": "0 7 * * *"
+            }
+        },
+        "ScheduledASGAsiaAfternoonOut": {
+            "Type": "AWS::AutoScaling::ScheduledAction",
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Ref": "TeamTaskerASG"
+                },
+                "DesiredCapacity": "2",
+                "MaxSize": "4",
+                "MinSize": "2",
+                "Recurrence": "0 9 * * *"
+            }
+        },
         "EC2WordPressConfig": {
             "Type": "AWS::AutoScaling::LaunchConfiguration",
             "Properties": {
@@ -668,7 +716,7 @@
                             "mkdir -p \"${efs_mount_point}\"\n",
                             "sudo mount -t efs ${file_system_id}:/ ${efs_mount_point}\n",
                             "\n",
-                            "if [ ! -d /var/www/html", " ]; then\n",
+                            "if [ ! -d /var/www/html ]; then\n",
                             "   mkdir -p /var/www/html\n",
                             "   cd /tmp/\n",
                             "   curl -LO https://wordpress.org/latest.tar.gz\n",
@@ -713,6 +761,57 @@
                         "HostedZoneId": {
                             "Fn::GetAtt": ["TeamTaskerELB", "CanonicalHostedZoneNameID"]
                         }
+                    }
+                }]
+            }
+        },
+        "EmailSNSTopic": {
+            "Type": "AWS::SNS::Topic",
+            "Properties": {
+                "Subscription": [{
+                    "Endpoint": "nil0310@arastudent.ac.nz",
+                    "Protocol": "email"
+                }]
+            }
+        },
+        "EmergencyCPUUsageAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "MetricName": "CPUUtilization",
+                "Namespace": "AWS/EC2",
+                "Statistic": "Average",
+                "Period": "60",
+                "EvaluationPeriods": "3",
+                "Threshold": "95",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "AlarmActions": [{
+                    "Ref": "EmailSNSTopic"
+                }],
+                "Dimensions": [{
+                    "Name": "AutoScalingGroupName",
+                    "Value": {
+                        "Ref": "TeamTaskerASG"
+                    }
+                }]
+            }
+        },
+        "EmergencyUnhealthyInstancesAlarm": {
+            "Type": "AWS::CloudWatch::Alarm",
+            "Properties": {
+                "MetricName": "UnHealthyHostCount",
+                "Namespace": "AWS/ELB",
+                "Statistic": "Minimum",
+                "Period": "60",
+                "EvaluationPeriods": "1",
+                "Threshold": "4",
+                "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+                "AlarmActions": [{
+                    "Ref": "EmailSNSTopic"
+                }],
+                "Dimensions": [{
+                    "Name": "LoadBalancerName",
+                    "Value": {
+                        "Ref": "TeamTaskerELB"
                     }
                 }]
             }
