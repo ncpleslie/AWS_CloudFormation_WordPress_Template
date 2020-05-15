@@ -604,7 +604,6 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "DesiredCapacity": "3",
                 "MaxSize": "5",
                 "MinSize": "3",
                 "Recurrence": "0 6 * * *"
@@ -616,7 +615,6 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "DesiredCapacity": "2",
                 "MaxSize": "4",
                 "MinSize": "2",
                 "Recurrence": "0 8 * * *"
@@ -628,7 +626,6 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "DesiredCapacity": "3",
                 "MaxSize": "5",
                 "MinSize": "3",
                 "Recurrence": "0 15 * * *"
@@ -640,7 +637,6 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "DesiredCapacity": "2",
                 "MaxSize": "4",
                 "MinSize": "2",
                 "Recurrence": "0 17 * * *"
@@ -652,7 +648,6 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "DesiredCapacity": "3",
                 "MaxSize": "5",
                 "MinSize": "3",
                 "Recurrence": "0 22 * * *"
@@ -664,7 +659,6 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "DesiredCapacity": "2",
                 "MaxSize": "4",
                 "MinSize": "2",
                 "Recurrence": "0 0 * * *"
@@ -676,7 +670,6 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "DesiredCapacity": "3",
                 "MaxSize": "5",
                 "MinSize": "3",
                 "Recurrence": "0 7 * * *"
@@ -688,7 +681,6 @@
                 "AutoScalingGroupName": {
                     "Ref": "TeamTaskerASG"
                 },
-                "DesiredCapacity": "2",
                 "MaxSize": "4",
                 "MinSize": "2",
                 "Recurrence": "0 9 * * *"
